@@ -267,6 +267,8 @@ def run_eval(
             # Agent-specific trajectory fields (0 / [] in naive mode)
             "steps_taken":           pipeline_result.get("steps_taken", 0),
             "tools_called":          pipeline_result.get("tools_called", []),
+            # policy_kb provenance: "api"|"local"|"error"|None per step (None = non-RAG tool)
+            "tool_sources":          pipeline_result.get("tool_sources", []),
         }
         results.append(result)
 
@@ -298,6 +300,21 @@ def compute_scorecard(results: list[dict]) -> dict:
         "avg": round(sum(steps) / n, 2) if steps else 0.0,
     }
 
+    # policy_kb source distribution: count each "api"/"local"/"error" across all
+    # tool_sources lists. None entries (non-RAG tools) are ignored. Lets us see
+    # remote-RAG availability per eval run.
+    src_counts = {"api": 0, "local": 0, "error": 0}
+    for r in results:
+        for src in r.get("tool_sources", []) or []:
+            if src in src_counts:
+                src_counts[src] += 1
+    total_rag_calls = sum(src_counts.values())
+    rag_source_dist = {
+        **src_counts,
+        "total":   total_rag_calls,
+        "api_pct": round(src_counts["api"] / total_rag_calls, 4) if total_rag_calls else 0.0,
+    }
+
     return {
         "n":                       n,
         "classification_accuracy": round(classification_acc,       4),
@@ -311,6 +328,7 @@ def compute_scorecard(results: list[dict]) -> dict:
         "faithfulness_raw":        round(sum(r["faithfulness"] for r in results) / n, 2),
         "correctness_raw":         round(sum(r["correctness"]  for r in results) / n, 2),
         "steps_distribution":      steps_dist,
+        "rag_source_distribution": rag_source_dist,
     }
 
 
@@ -362,6 +380,11 @@ def print_scorecard(scorecard: dict, title: str = "Overall Scorecard") -> None:
     if dist.get("avg", 0) > 0:
         print(f"  Steps/query (avg)      : {dist['avg']}  "
               f"[1-step={dist.get('1',0)}  2-step={dist.get('2',0)}  3+={dist.get('3+',0)}]")
+    rag_dist = scorecard.get("rag_source_distribution", {})
+    if rag_dist.get("total", 0) > 0:
+        print(f"  policy_kb provenance   : api={rag_dist.get('api',0)}  "
+              f"local={rag_dist.get('local',0)}  error={rag_dist.get('error',0)}  "
+              f"(total={rag_dist['total']}, api_pct={rag_dist.get('api_pct',0):.1%})")
     print("=" * width + "\n")
 
 
