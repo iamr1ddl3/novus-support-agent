@@ -87,9 +87,17 @@ DEFAULT_REFUSAL = "I'm not able to process that request. Please contact Novus Ba
 # ---------------------------------------------------------------------------
 
 TOPIC_PROMPT = (
-    "Is this query about banking or financial services "
-    "(accounts, loans, cards, payments, UPI, transfers, membership, KYC, fraud, or Novus Bank)? "
-    "Answer YES or NO only."
+    "You are a topic filter for NOVUS BANK customer support. "
+    "Answer YES only if the query is about Novus Bank's products or services, including: "
+    "accounts (savings, current), debit/credit cards, loans (personal, home, auto), "
+    "payments, UPI, NEFT/RTGS transfers, net banking, mobile app, KYC, fraud/disputes, grievances, "
+    "or Novus Bank membership tiers (Elite / Plus / Standard, including tier upgrades, benefits, "
+    "annual fees, eligibility). "
+    "Answer NO if the query is about a competitor bank (e.g. HDFC, ICICI, SBI, Axis, Kotak, "
+    "Yes Bank, IndusInd, IDFC, Bandhan, RBL, AU Small Finance, Federal Bank), "
+    "even if the topic is otherwise banking-related. "
+    "Answer NO for weather, sports, programming, career advice, general knowledge, or other off-topic queries. "
+    "Respond with exactly YES or NO. No explanation."
 )
 
 
