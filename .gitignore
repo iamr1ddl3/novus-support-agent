@@ -20,3 +20,10 @@ Thumbs.db
 
 # Audit logs (may contain PII redaction records)
 novus-support-agent/data/audit.jsonl
+
+# uvicorn / nohup runtime artefacts
+api_*.log
+api_pid*.txt
+
+# playwright MCP cache
+.playwright-mcp/
