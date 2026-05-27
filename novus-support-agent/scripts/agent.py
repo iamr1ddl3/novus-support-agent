@@ -109,6 +109,8 @@ class AgentState(TypedDict):
     tool:           str
     # Annotated[list, operator.add] means LangGraph merges updates by appending
     tool_results:   Annotated[list[str], operator.add]
+    # Per-step provenance for policy_kb: "api" | "local" | "error" | None (non-policy_kb tools)
+    tool_sources:   Annotated[list[str | None], operator.add]
     final_answer:   str
     should_escalate: bool
     steps_taken:    int
@@ -119,11 +121,17 @@ class AgentState(TypedDict):
 # Tool implementations
 # ---------------------------------------------------------------------------
 
-def _run_policy_kb(intent: str, query: str = "") -> str:
+def _run_policy_kb(intent: str, query: str = "") -> tuple[str, str]:
     """Retrieve policy context via Project A's RAG API (ADR-8).
 
     Calls POST /query on Project A for hybrid vector retrieval over the full
     19-doc corpus. Falls back to in-memory retrieval if the API is unreachable.
+
+    Returns:
+        (result_str, source) where source ∈ {"api", "local", "error"}:
+            "api"   — Layer 1 succeeded (Project A RAG API returned non-empty context)
+            "local" — Layer 2 (local retrieve_filtered + dedup) ran
+            "error" — Layer 3 envelope (local retrieval also raised)
     """
     if query:
         try:
@@ -135,7 +143,7 @@ def _run_policy_kb(intent: str, query: str = "") -> str:
             resp.raise_for_status()
             ctx = resp.json().get("context", "")
             if ctx:
-                return f"[policy_kb] {ctx}"
+                return f"[policy_kb] {ctx}", "api"
         except Exception:
             pass  # fall through to in-memory fallback
 
@@ -144,9 +152,10 @@ def _run_policy_kb(intent: str, query: str = "") -> str:
         chunks = retrieve_filtered(intent)
         unique, _ = deduplicate_chunks(chunks, threshold=0.75)
         context = "\n\n---\n\n".join(c["content"] for c in unique)
-        return f"[policy_kb] {context}" if context else "[policy_kb] No relevant policy found."
+        result = f"[policy_kb] {context}" if context else "[policy_kb] No relevant policy found."
+        return result, "local"
     except Exception as e:
-        return f"[policy_kb] Retrieval error: {e}"
+        return f"[policy_kb] Retrieval error: {e}", "error"
 
 
 def _run_order_tracker(query: str) -> str:
@@ -315,9 +324,11 @@ def tool_node(state: AgentState) -> dict:
     query       = state["query"]
     n_results   = len(state["tool_results"])
 
+    source: str | None = None  # set by _run_policy_kb branches; None for non-RAG tools
+
     if tool == "policy_kb":
-        result      = _run_policy_kb(intent, query=query)
-        tool_label  = "policy_kb"
+        result, source = _run_policy_kb(intent, query=query)
+        tool_label     = "policy_kb"
 
     elif tool == "order_tracker":
         result      = _run_order_tracker(query)
@@ -330,19 +341,20 @@ def tool_node(state: AgentState) -> dict:
     elif tool == "multi_tool":
         if n_results == 0:
             # First pass: policy knowledge base via Project A RAG API
-            result     = _run_policy_kb(intent, query=query)
-            tool_label = "policy_kb"
+            result, source = _run_policy_kb(intent, query=query)
+            tool_label     = "policy_kb"
         else:
             # Second pass: account lookup
             result     = _run_account_lookup(query)
             tool_label = "account_lookup"
     else:
-        result      = _run_policy_kb(intent, query=query)
-        tool_label  = "policy_kb_fallback"
+        result, source = _run_policy_kb(intent, query=query)
+        tool_label     = "policy_kb_fallback"
 
     return {
         "tool_results":  [result],           # operator.add appends this
         "tools_called":  [tool_label],       # operator.add appends this
+        "tool_sources":  [source],           # operator.add appends this; None for non-RAG tools
         "steps_taken":   state["steps_taken"] + 1,
     }
 
@@ -516,6 +528,7 @@ def run_agent(query: str) -> dict:
             "trace_id":      None,   stub — LangFuse integration future work
             "steps_taken":   int,    total node executions (classify + tools + respond/escalate)
             "tools_called":  list,   ordered list of tool labels executed
+            "tool_sources":  list,   per-step provenance for policy_kb: "api"|"local"|"error"|None (None for non-RAG tools)
         }
     """
     initial_state: AgentState = {
@@ -523,6 +536,7 @@ def run_agent(query: str) -> dict:
         "intent":         "",
         "tool":           "",
         "tool_results":   [],
+        "tool_sources":   [],
         "final_answer":   "",
         "should_escalate": False,
         "steps_taken":    0,
@@ -544,6 +558,7 @@ def run_agent(query: str) -> dict:
             "trace_id":     None,
             "steps_taken":  0,
             "tools_called": [],
+            "tool_sources": [],
         }
 
     return {
@@ -556,6 +571,7 @@ def run_agent(query: str) -> dict:
         "trace_id":     None,
         "steps_taken":  result["steps_taken"],
         "tools_called": result["tools_called"],
+        "tool_sources": result.get("tool_sources", []),
     }
 
 
