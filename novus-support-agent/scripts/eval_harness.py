@@ -204,7 +204,11 @@ def run_eval(
     if use_agent:
         from scripts.agent import run_agent as _call
         def call_pipeline(query: str) -> dict:
-            return _call(query)
+            # Eval measures classification/routing/answer quality on golden text:
+            # no PII (anonymizer off) and guardrail off so the 32 answerable
+            # entries are scored on the pipeline itself. Gap-3 failure-class
+            # entries re-enable the guardrail per-entry (see run_eval).
+            return _call(query, use_guardrail=False, use_anonymizer=False)
     else:
         from scripts.support_pipeline import handle_query as _call  # type: ignore[assignment]
         def call_pipeline(query: str) -> dict:

@@ -53,6 +53,20 @@ import requests
 
 from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
 
+# Gap 5 — the API calls run_agent directly, so input safety + PII redaction must
+# be wired HERE (they previously existed only on the unused handle_query path).
+try:
+    from scripts.input_guardrail import check_input as _check_input
+    INPUT_GUARDRAIL_AVAILABLE = True
+except ImportError:
+    INPUT_GUARDRAIL_AVAILABLE = False
+
+try:
+    from scripts.pii_anonymizer import PiiAnonymizer, redaction_audit_log
+    PII_ANONYMIZER_AVAILABLE = True
+except ImportError:
+    PII_ANONYMIZER_AVAILABLE = False
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ADR-8: Project A RAG API URL for the policy_kb tool path
@@ -502,28 +516,50 @@ app = _build_graph()
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def run_agent(query: str) -> dict:
+def run_agent(
+    query: str,
+    use_guardrail: bool = True,
+    use_anonymizer: bool = True,
+) -> dict:
     """Run the LangGraph agent on a customer query.
 
-    Returns a dict with the same keys as handle_query() plus agent-specific
-    fields (steps_taken, tools_called) for trajectory analysis.
+    Gap 5: the API calls this directly, so the input guardrail and PII
+    anonymizer are wired HERE (default ON — opt-out for eval/internal callers).
+    Order: input guardrail → anonymize → graph(clean_query) → restore PII.
 
-    Return shape:
-        {
-            "query":         str,
-            "intent":        str,    one of 6 intent classes
-            "tool":          str,    initial tool route assigned by classify_node
-            "escalation":    bool,   True if escalated to human agent
-            "answer":        str,    final grounded answer or escalation message
-            "context":       str,    concatenated tool results (for eval harness)
-            "trace_id":      None,   stub — LangFuse integration future work
-            "steps_taken":   int,    total node executions (classify + tools + respond/escalate)
-            "tools_called":  list,   ordered list of tool labels executed
-            "tool_sources":  list,   per-step provenance for policy_kb: "api"|"local"|"error"|None (None for non-RAG tools)
-        }
+    Returns a dict with the same keys as handle_query() plus agent-specific
+    fields (steps_taken, tools_called, tool_sources) and the safety fields
+    pii_redacted / guardrail_blocked / guardrail_reason.
     """
+    # --- Input guardrail (Gap 5): block before any tool call or LLM generation ---
+    if use_guardrail and INPUT_GUARDRAIL_AVAILABLE:
+        guard = _check_input(query)
+        if not guard["safe"]:
+            return {
+                "query":             query,
+                "intent":            "blocked",
+                "tool":              "input_guardrail",
+                "escalation":        False,
+                "answer":            guard["refusal"],
+                "context":           "",
+                "trace_id":          None,
+                "steps_taken":       0,
+                "tools_called":      [],
+                "tool_sources":      [],
+                "pii_redacted":      None,
+                "guardrail_blocked": True,
+                "guardrail_reason":  guard["category"],
+            }
+
+    # --- PII anonymization (Gap 5): strip before the graph touches any LLM ---
+    anonymizer  = None
+    clean_query = query
+    if use_anonymizer and PII_ANONYMIZER_AVAILABLE:
+        anonymizer  = PiiAnonymizer()
+        clean_query = anonymizer.anonymize(query)
+
     initial_state: AgentState = {
-        "query":          query,
+        "query":          clean_query,   # graph runs on the anonymized query
         "intent":         "",
         "tool":           "",
         "tool_results":   [],
@@ -538,31 +574,51 @@ def run_agent(query: str) -> dict:
         result = app.invoke(initial_state)
     except Exception as e:
         # Return a safe error dict so the eval harness can continue across
-        # all 32 golden dataset entries even if one query fails
+        # all golden dataset entries even if one query fails
         return {
-            "query":        query,
-            "intent":       "unknown",
-            "tool":         "unknown",
-            "escalation":   False,
-            "answer":       f"Agent error: {e}",
-            "context":      "",
-            "trace_id":     None,
-            "steps_taken":  0,
-            "tools_called": [],
-            "tool_sources": [],
+            "query":             query,
+            "intent":            "unknown",
+            "tool":              "unknown",
+            "escalation":        False,
+            "answer":            f"Agent error: {e}",
+            "context":           "",
+            "trace_id":          None,
+            "steps_taken":       0,
+            "tools_called":      [],
+            "tool_sources":      [],
+            "pii_redacted":      None,
+            "guardrail_blocked": False,
+            "guardrail_reason":  None,
         }
 
+    # --- Restore PII in the answer (Gap 5) so the customer sees their own data ---
+    raw_answer   = result["final_answer"]
+    answer       = anonymizer.restore(raw_answer) if anonymizer else raw_answer
+    pii_redacted = bool(anonymizer and anonymizer.has_pii()) if use_anonymizer else None
+
+    if anonymizer and pii_redacted:
+        try:
+            redaction_audit_log(
+                query=query, anonymizer=anonymizer,
+                intent=result["intent"], trace_id=None,
+            )
+        except Exception:
+            pass  # audit log failure must never break the pipeline
+
     return {
-        "query":        result["query"],
-        "intent":       result["intent"],
-        "tool":         result["tool"],
-        "escalation":   result["should_escalate"],
-        "answer":       result["final_answer"],
-        "context":      "\n\n---\n\n".join(result["tool_results"]),
-        "trace_id":     None,
-        "steps_taken":  result["steps_taken"],
-        "tools_called": result["tools_called"],
-        "tool_sources": result.get("tool_sources", []),
+        "query":             query,      # original — graph saw the anonymized form
+        "intent":            result["intent"],
+        "tool":              result["tool"],
+        "escalation":        result["should_escalate"],
+        "answer":            answer,
+        "context":           "\n\n---\n\n".join(result["tool_results"]),
+        "trace_id":          None,
+        "steps_taken":       result["steps_taken"],
+        "tools_called":      result["tools_called"],
+        "tool_sources":      result.get("tool_sources", []),
+        "pii_redacted":      pii_redacted,
+        "guardrail_blocked": False,
+        "guardrail_reason":  None,
     }
 
 
