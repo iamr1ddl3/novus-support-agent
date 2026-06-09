@@ -4,9 +4,9 @@
     "n": 42,
     "n_answerable": 32,
     "n_refusal": 10,
-    "refusal_score": 0.88,
-    "refusal_score_raw": 4.4,
-    "refusal_pass_rate": 0.9,
+    "refusal_score": 0.8,
+    "refusal_score_raw": 4.0,
+    "refusal_pass_rate": 0.8,
     "classification_accuracy": 0.75,
     "routing_accuracy": 0.9688,
     "correct_handle_rate": 1.0,
@@ -14,9 +14,9 @@
     "n_handle_cases": 24,
     "n_escalation_cases": 8,
     "faithfulness": 0.8438,
-    "correctness": 0.85,
+    "correctness": 0.8562,
     "faithfulness_raw": 4.22,
-    "correctness_raw": 4.25,
+    "correctness_raw": 4.28,
     "steps_distribution": {
       "1": 0,
       "2": 0,
@@ -51,7 +51,7 @@
         "total": 6,
         "classification_correct": 4,
         "classification_accuracy": 0.6667,
-        "faithfulness_raw": 4.17,
+        "faithfulness_raw": 4.0,
         "correctness_raw": 4.5
       },
       "product_info": {
@@ -65,8 +65,8 @@
         "total": 5,
         "classification_correct": 3,
         "classification_accuracy": 0.6,
-        "faithfulness_raw": 4.8,
-        "correctness_raw": 4.0
+        "faithfulness_raw": 5.0,
+        "correctness_raw": 4.2
       },
       "general": {
         "total": 5,
@@ -89,8 +89,8 @@
       },
       "injection": {
         "total": 3,
-        "refusal_score_raw": 5.0,
-        "refusal_pass_rate": 1.0
+        "refusal_score_raw": 3.67,
+        "refusal_pass_rate": 0.6667
       },
       "adversarial": {
         "total": 2,
