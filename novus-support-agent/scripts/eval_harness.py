@@ -44,6 +44,8 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware judge calls
+
 try:
     from langfuse import Langfuse
     _lf = Langfuse(
@@ -109,13 +111,13 @@ Respond with valid JSON only, no other text:
 
 def judge_faithfulness(answer: str, context: str) -> dict[str, Any]:
     prompt = FAITHFULNESS_PROMPT.format(context=context[:3000], answer=answer)
-    response = client.chat.completions.create(
+    content = llm_complete(
+        [{"role": "user", "content": prompt}],
         model=JUDGE_MODEL,
         temperature=0.0,
-        messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
     )
-    return json.loads(response.choices[0].message.content)
+    return json.loads(content)
 
 
 # ---------------------------------------------------------------------------
@@ -148,13 +150,13 @@ def judge_correctness(query: str, answer: str, expected_answer: str) -> dict[str
     prompt = CORRECTNESS_PROMPT.format(
         query=query, expected_answer=expected_answer, answer=answer
     )
-    response = client.chat.completions.create(
+    content = llm_complete(
+        [{"role": "user", "content": prompt}],
         model=JUDGE_MODEL,
         temperature=0.0,
-        messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
     )
-    return json.loads(response.choices[0].message.content)
+    return json.loads(content)
 
 
 # ---------------------------------------------------------------------------

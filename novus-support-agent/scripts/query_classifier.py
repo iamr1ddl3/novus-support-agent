@@ -36,6 +36,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
+from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
+
 INTENTS = [
     "return_or_refund",
     "order_status",
@@ -80,17 +82,11 @@ Respond with ONLY one of: policy_kb  or  multi_tool"""
 
 def _disambiguate_return(query: str) -> str:
     """Use LLM to decide if return_or_refund maps to policy_kb or multi_tool."""
-    from openai import OpenAI
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    response = client.chat.completions.create(
+    result = llm_complete(
+        [{"role": "user", "content": DISAMBIGUATE_PROMPT.format(query=query)}],
         model="gpt-4o-mini",
         temperature=0,
-        messages=[{
-            "role": "user",
-            "content": DISAMBIGUATE_PROMPT.format(query=query),
-        }],
-    )
-    result = response.choices[0].message.content.strip().lower()
+    ).lower()
     return result if result in ("policy_kb", "multi_tool") else "policy_kb"
 
 

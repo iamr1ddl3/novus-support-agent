@@ -51,6 +51,8 @@ from langgraph.graph import StateGraph, END
 from openai import OpenAI
 import requests
 
+from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ADR-8: Project A RAG API URL for the policy_kb tool path
@@ -268,15 +270,14 @@ def _should_escalate(query: str, tool_results: list[str]) -> bool:
         .replace("{tool_summary}", tool_summary[:500])
     )
     try:
-        response = client.chat.completions.create(
+        verdict = llm_complete(
+            [{"role": "user", "content": prompt}],
             model=ANSWER_MODEL,
             temperature=0.0,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        verdict = response.choices[0].message.content.strip().lower()
+        ).lower()
         return "escalate" in verdict
     except Exception:
-        # If the LLM call fails, trust the keyword hit as a safe default
+        # If the LLM call fails (even after fallback), trust the keyword hit
         return keyword_hit
 
 
@@ -419,12 +420,7 @@ def respond_node(state: AgentState) -> dict:
         {"role": "system", "content": RESPOND_SYSTEM_PROMPT + "\n\nTool Results:\n" + context},
         {"role": "user",   "content": state["query"]},
     ]
-    response = client.chat.completions.create(
-        model=ANSWER_MODEL,
-        temperature=TEMPERATURE,
-        messages=messages,
-    )
-    answer = response.choices[0].message.content.strip()
+    answer = llm_complete(messages, model=ANSWER_MODEL, temperature=TEMPERATURE)
     return {
         "final_answer":   answer,
         "should_escalate": False,
@@ -455,12 +451,7 @@ def escalate_node(state: AgentState) -> dict:
         {"role": "system", "content": ESCALATE_SYSTEM_PROMPT},
         {"role": "user",   "content": f"Query: {state['query']}\nEscalation ref: {ref}"},
     ]
-    response = client.chat.completions.create(
-        model=ANSWER_MODEL,
-        temperature=TEMPERATURE,
-        messages=messages,
-    )
-    answer = response.choices[0].message.content.strip()
+    answer = llm_complete(messages, model=ANSWER_MODEL, temperature=TEMPERATURE)
     return {
         "final_answer":    answer,
         "should_escalate": True,

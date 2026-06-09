@@ -33,6 +33,8 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 JUDGE_MODEL       = "gpt-4o-mini"
@@ -81,21 +83,19 @@ def check_hallucination(answer: str, context: str) -> dict:
     )
 
     try:
-        response = client.chat.completions.create(
+        raw = llm_complete(
+            [{"role": "user", "content": prompt}],
             model=JUDGE_MODEL,
             temperature=JUDGE_TEMPERATURE,
             max_tokens=600,
-            messages=[{"role": "user", "content": prompt}],
         )
     except Exception:
-        # Fail closed: API error → treat as hallucination detected
+        # Fail closed: API error (even after fallback) → treat as hallucination
         return {
             "has_hallucination":  True,
             "claims":             [],
             "unsupported_claims": ["[api_error — could not verify claims]"],
         }
-
-    raw = response.choices[0].message.content.strip()
 
     # Strip markdown fences if model adds them
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
