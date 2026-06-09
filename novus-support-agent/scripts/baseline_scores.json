@@ -1,60 +1,101 @@
 {
+  "mode": "LangGraph Agent",
   "scorecard": {
-    "n": 32,
-    "classification_accuracy": 0.7812,
-    "routing_accuracy": 0.75,
+    "n": 42,
+    "n_answerable": 32,
+    "n_refusal": 10,
+    "refusal_score": 0.88,
+    "refusal_score_raw": 4.4,
+    "refusal_pass_rate": 0.9,
+    "classification_accuracy": 0.75,
+    "routing_accuracy": 0.9688,
     "correct_handle_rate": 1.0,
-    "missed_escalation_rate": 0.0,
+    "missed_escalation_rate": 0.875,
     "n_handle_cases": 24,
     "n_escalation_cases": 8,
-    "faithfulness": 0.9625,
-    "correctness": 0.7188,
-    "faithfulness_raw": 4.81,
-    "correctness_raw": 3.59
+    "faithfulness": 0.8438,
+    "correctness": 0.85,
+    "faithfulness_raw": 4.22,
+    "correctness_raw": 4.25,
+    "steps_distribution": {
+      "1": 0,
+      "2": 0,
+      "3+": 32,
+      "avg": 3.03
+    },
+    "rag_source_distribution": {
+      "api": 0,
+      "local": 23,
+      "error": 0,
+      "total": 23,
+      "api_pct": 0.0
+    }
   },
   "stratified": {
     "by_intent": {
       "return_or_refund": {
         "total": 5,
-        "classification_correct": 4,
-        "classification_accuracy": 0.8,
-        "faithfulness_raw": 5.0,
-        "correctness_raw": 3.6
+        "classification_correct": 2,
+        "classification_accuracy": 0.4,
+        "faithfulness_raw": 3.4,
+        "correctness_raw": 4.0
       },
       "order_status": {
         "total": 5,
         "classification_correct": 5,
         "classification_accuracy": 1.0,
-        "faithfulness_raw": 5.0,
-        "correctness_raw": 3.4
+        "faithfulness_raw": 4.4,
+        "correctness_raw": 4.0
       },
       "billing_or_payment": {
         "total": 6,
-        "classification_correct": 3,
-        "classification_accuracy": 0.5,
-        "faithfulness_raw": 4.0,
-        "correctness_raw": 3.67
+        "classification_correct": 4,
+        "classification_accuracy": 0.6667,
+        "faithfulness_raw": 4.17,
+        "correctness_raw": 4.5
       },
       "product_info": {
         "total": 6,
         "classification_correct": 6,
         "classification_accuracy": 1.0,
-        "faithfulness_raw": 5.0,
-        "correctness_raw": 3.5
+        "faithfulness_raw": 4.33,
+        "correctness_raw": 4.5
       },
       "membership": {
         "total": 5,
         "classification_correct": 3,
         "classification_accuracy": 0.6,
-        "faithfulness_raw": 5.0,
-        "correctness_raw": 3.2
+        "faithfulness_raw": 4.8,
+        "correctness_raw": 4.0
       },
       "general": {
         "total": 5,
         "classification_correct": 4,
         "classification_accuracy": 0.8,
-        "faithfulness_raw": 5.0,
-        "correctness_raw": 4.2
+        "faithfulness_raw": 4.2,
+        "correctness_raw": 4.4
+      }
+    },
+    "by_failure_class": {
+      "out_of_scope": {
+        "total": 3,
+        "refusal_score_raw": 5.0,
+        "refusal_pass_rate": 1.0
+      },
+      "no_answer": {
+        "total": 2,
+        "refusal_score_raw": 4.0,
+        "refusal_pass_rate": 1.0
+      },
+      "injection": {
+        "total": 3,
+        "refusal_score_raw": 5.0,
+        "refusal_pass_rate": 1.0
+      },
+      "adversarial": {
+        "total": 2,
+        "refusal_score_raw": 3.0,
+        "refusal_pass_rate": 0.5
       }
     }
   }

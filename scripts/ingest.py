@@ -17,6 +17,12 @@ client = OpenAI()
 CHUNK_SIZE = 500
 CORPUS_DIR = os.path.join(os.path.dirname(__file__), "..", "corpus")
 
+# Gap 4 — embedding version pinning. Stamped into every chunk row. NOTE: B's
+# live query path is in-memory (retrieval.py over data/products/*.md), so this
+# table is not on the hot path; the column is added for parity with Project A
+# and to future-proof a pgvector cutover.
+EMBED_MODEL = "text-embedding-3-small"
+
 
 def get_connection():
     conn = psycopg2.connect(
@@ -40,7 +46,7 @@ def naive_chunk(text, chunk_size=CHUNK_SIZE):
 
 
 def embed_texts(texts):
-    response = client.embeddings.create(model="text-embedding-3-small", input=texts)
+    response = client.embeddings.create(model=EMBED_MODEL, input=texts)
     return [item.embedding for item in response.data]
 
 
@@ -71,9 +77,9 @@ def ingest():
                     "chunk_index": chunk_index,
                 })
                 cur.execute(
-                    """INSERT INTO chunks (doc_name, chunk_index, content, embedding, metadata)
-                       VALUES (%s, %s, %s, %s::vector, %s)""",
-                    (doc_name, chunk_index, chunk, embedding, metadata),
+                    """INSERT INTO chunks (doc_name, chunk_index, content, embedding, metadata, embedding_model)
+                       VALUES (%s, %s, %s, %s::vector, %s, %s)""",
+                    (doc_name, chunk_index, chunk, embedding, metadata, EMBED_MODEL),
                 )
 
         total_chunks += len(chunks)

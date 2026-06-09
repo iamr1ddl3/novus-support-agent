@@ -34,7 +34,8 @@ def setup():
             chunk_index INTEGER NOT NULL,
             content TEXT NOT NULL,
             embedding vector(1536),
-            metadata JSONB DEFAULT '{}'
+            metadata JSONB DEFAULT '{}',
+            embedding_model TEXT NOT NULL DEFAULT 'text-embedding-3-small'
         );
     """)
 

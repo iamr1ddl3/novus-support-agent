@@ -39,6 +39,8 @@ load_dotenv()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 GUARD_MODEL       = "gpt-4o-mini"
@@ -108,16 +110,15 @@ def is_on_topic(query: str) -> bool:
     Fails closed: any API error returns False (treat as off-topic, block).
     """
     try:
-        response = client.chat.completions.create(
-            model=GUARD_MODEL,
-            temperature=GUARD_TEMPERATURE,
-            max_tokens=5,
-            messages=[{
+        answer = llm_complete(
+            [{
                 "role": "user",
                 "content": f"{TOPIC_PROMPT} Query: <query>{query}</query>",
             }],
-        )
-        answer = response.choices[0].message.content.strip().lower()
+            model=GUARD_MODEL,
+            temperature=GUARD_TEMPERATURE,
+            max_tokens=5,
+        ).lower()
         return "yes" in answer
     except Exception:
         return False  # fail closed
@@ -147,26 +148,25 @@ def check_input(query: str) -> dict:
 
     # Stage 2: full safety classification.
     try:
-        response = client.chat.completions.create(
-            model=GUARD_MODEL,
-            temperature=GUARD_TEMPERATURE,
-            max_tokens=100,
-            messages=[
+        raw = llm_complete(
+            [
                 {"role": "system", "content": GUARD_SYSTEM_PROMPT},
                 # XML delimiters prevent the query from closing the "Query:" label
                 # and injecting fake JSON structure into the classification context.
                 {"role": "user", "content": f"<query>{query}</query>"},
             ],
+            model=GUARD_MODEL,
+            temperature=GUARD_TEMPERATURE,
+            max_tokens=100,
         )
     except Exception:
-        # Fail closed: any API error (timeout, rate-limit, outage) blocks the query.
+        # Fail closed: any API error (timeout, rate-limit, outage — even after
+        # the fallback model) blocks the query.
         return {
             "safe":     False,
             "category": "api_error",
             "refusal":  DEFAULT_REFUSAL,
         }
-
-    raw = response.choices[0].message.content.strip()
 
     # Strip markdown fences if the model adds them despite instructions
     raw = re.sub(r"^```(?:json)?\s*", "", raw)
