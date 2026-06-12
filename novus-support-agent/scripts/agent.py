@@ -64,8 +64,20 @@ except ImportError:
 try:
     from scripts.pii_anonymizer import PiiAnonymizer, redaction_audit_log
     PII_ANONYMIZER_AVAILABLE = True
-except ImportError:
+# Catch Exception, not just ImportError: a missing spaCy model (en_core_web_lg)
+# surfaces as OSError from presidio's module-level AnalyzerEngine() build.
+except Exception as _pii_import_error:
     PII_ANONYMIZER_AVAILABLE = False
+    print(
+        "=" * 70
+        + "\nWARNING: PII anonymizer UNAVAILABLE — customer queries will reach"
+        "\nthe LLM UNREDACTED even though use_anonymizer defaults to True."
+        f"\nCause: {type(_pii_import_error).__name__}: {_pii_import_error}"
+        "\nFix: pip install presidio-analyzer presidio-anonymizer spacy"
+        "\n     && python -m spacy download en_core_web_lg"
+        "\n" + "=" * 70,
+        file=sys.stderr,
+    )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

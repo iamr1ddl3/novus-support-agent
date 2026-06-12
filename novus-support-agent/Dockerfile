@@ -9,6 +9,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# presidio needs the spaCy model baked in — without it the PII anonymizer
+# no-ops and the image serves with redaction disabled (mirrors Project A)
+RUN python -m spacy download en_core_web_lg
 
 # Copy application code and product data
 # data/products/ must be baked in — retrieval.py reads from the filesystem
