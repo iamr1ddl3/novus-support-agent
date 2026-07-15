@@ -33,6 +33,27 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Novus Support Agent", version="1.0.0")
 
+
+@app.on_event("startup")
+def _check_safety_stack() -> None:
+    """Fail loud (in logs) if the PII anonymizer can't load — e.g. the spaCy
+    en_core_web_lg model is missing from the image. The agent would otherwise
+    serve traffic with redaction silently disabled."""
+    from scripts.agent import PII_ANONYMIZER_AVAILABLE, INPUT_GUARDRAIL_AVAILABLE
+
+    if not PII_ANONYMIZER_AVAILABLE:
+        print(
+            "WARNING [startup]: PII anonymizer unavailable — serving WITHOUT "
+            "PII redaction. See scripts/agent.py import warning for the cause.",
+            file=sys.stderr,
+        )
+    if not INPUT_GUARDRAIL_AVAILABLE:
+        print(
+            "WARNING [startup]: input guardrail unavailable — serving WITHOUT "
+            "the input safety gate.",
+            file=sys.stderr,
+        )
+
 _FRONTEND = Path(__file__).parent / "frontend" / "index.html"
 
 # ---------------------------------------------------------------------------
