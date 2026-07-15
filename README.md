@@ -132,12 +132,9 @@ python scripts/eval_harness.py --save-baseline
 | **Classification accuracy** | `75%` | Intent classified correctly? |
 | **Refusal / escalation pass** | `4.0 / 5.0` *(80%)* | Declined/escalated when it should? |
 
-*32 answerable + 10 escalation cases. Avg ~3 agent steps per answerable query.*
+*32 answerable + 10 escalation cases. Avg ~3 agent steps per answerable query. Current baseline figures; numbers vary by model version. Diagnosed limitations — escalation threshold and classification accuracy — are detailed in [Known Weaknesses](#-known-weaknesses) below.*
 
 </div>
-
-> [!WARNING]
-> **Honest weak spots:** the **missed-escalation rate is 87.5%** — the agent auto-answers most cases it *should* have handed to a human. Classification accuracy (75%) is also the weakest link. Both are the primary follow-up targets. *(Numbers vary by model version; these are the current baseline figures.)*
 
 ---
 
