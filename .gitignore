@@ -27,3 +27,7 @@ api_pid*.txt
 
 # playwright MCP cache
 .playwright-mcp/
+
+# Vault-internal agent instructions — never publish
+CLAUDE.md
+**/CLAUDE.md

@@ -1,8 +1,17 @@
-openai
-langgraph>=0.2
+openai>=1.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
 langfuse>=2.0.0,<3.0.0
 psycopg2-binary
 pgvector
 python-dotenv
 rich
 litellm>=1.0.0
+langgraph>=0.2.0
+requests              # ADR-8: policy_kb tool HTTP calls to Project A RAG API
+# Gap 5: PII redaction on the live agent path. Without these the anonymizer
+# module silently no-ops (PII_ANONYMIZER_AVAILABLE=False) and raw PII reaches
+# the LLM. en_core_web_lg is downloaded post-install (spacy download).
+presidio-analyzer
+presidio-anonymizer
+spacy
