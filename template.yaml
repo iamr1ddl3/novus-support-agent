@@ -12,10 +12,24 @@ Parameters:
     Default: dev
     AllowedValues: [dev, staging, prod]
 
-  OpenAIApiKey:
+  AppKeysSecretArn:
     Type: String
-    NoEcho: true
-    Description: OpenAI API key (stored in Secrets Manager)
+    Description: >
+      Full ARN of an existing Secrets Manager secret (created outside this stack)
+      whose JSON holds OPENAI_API_KEY, LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY.
+      Keeps every API key out of this template and out of stack parameters.
+
+  RagApiUrl:
+    Type: String
+    Description: Base URL of the Project A RAG API (its acmera-kb-dev APIEndpoint output)
+
+  UseSpot:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: >
+      Run tasks on Fargate Spot (about 70% cheaper; AWS may occasionally
+      replace a task). Set "false" for an interview or a demo that must not blip.
 
   ContainerPort:
     Type: Number
@@ -29,6 +43,9 @@ Parameters:
   TaskMemory:
     Type: String
     Default: "3072"
+
+Conditions:
+  UseSpotCapacity: !Equals [!Ref UseSpot, "true"]
 
 # ---------------------------------------------------------------------------
 # Resources
@@ -80,27 +97,6 @@ Resources:
         - Key: Name
           Value: !Sub acmera-support-${Environment}-public-b
 
-  # Private subnets (ECS tasks)
-  PrivateSubnetA:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.1.11.0/24
-      AvailabilityZone: !Select [0, !GetAZs ""]
-      Tags:
-        - Key: Name
-          Value: !Sub acmera-support-${Environment}-private-a
-
-  PrivateSubnetB:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.1.12.0/24
-      AvailabilityZone: !Select [1, !GetAZs ""]
-      Tags:
-        - Key: Name
-          Value: !Sub acmera-support-${Environment}-private-b
-
   # Public route table
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -127,42 +123,9 @@ Resources:
       SubnetId: !Ref PublicSubnetB
       RouteTableId: !Ref PublicRouteTable
 
-  # NAT Gateway (ECS tasks in private subnet need outbound reach to api.openai.com)
-  NatEIP:
-    Type: AWS::EC2::EIP
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatEIP.AllocationId
-      SubnetId: !Ref PublicSubnetA
-
-  PrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  PrivateRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway
-
-  PrivateSubnetARouteTableAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PrivateSubnetA
-      RouteTableId: !Ref PrivateRouteTable
-
-  PrivateSubnetBRouteTableAssoc:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref PrivateSubnetB
-      RouteTableId: !Ref PrivateRouteTable
+  # No NAT gateway (about $1/day each): ECS tasks run in the public subnets with
+  # a public IP for outbound calls (OpenAI, Langfuse, Cohere). Inbound is still
+  # locked to the ALB by ECSSecurityGroup, so tasks are not reachable directly.
 
   # -------------------------------------------------------------------------
   # Security Groups
@@ -190,22 +153,15 @@ Resources:
           SourceSecurityGroupId: !Ref ALBSecurityGroup
 
   # -------------------------------------------------------------------------
-  # Secrets Manager — OpenAI key only (no RDS needed for Project B)
-  # -------------------------------------------------------------------------
-  OpenAISecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: !Sub acmera-support-${Environment}-openai-secret
-      Description: OpenAI API key for Novus Support Agent
-      SecretString: !Sub '{"OPENAI_API_KEY": "${OpenAIApiKey}"}'
-
-  # -------------------------------------------------------------------------
   # ECS Cluster + IAM
   # -------------------------------------------------------------------------
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
       ClusterName: !Sub acmera-support-${Environment}-cluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
 
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
@@ -229,7 +185,7 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource:
-                  - !Ref OpenAISecret
+                  - !Ref AppKeysSecretArn
 
   # -------------------------------------------------------------------------
   # CloudWatch Log Group
@@ -268,19 +224,19 @@ Resources:
               awslogs-stream-prefix: ecs
           Secrets:
             - Name: OPENAI_API_KEY
-              ValueFrom: !Sub "${OpenAISecret}:OPENAI_API_KEY::"
+              ValueFrom: !Sub "${AppKeysSecretArn}:OPENAI_API_KEY::"
+            - Name: LANGFUSE_PUBLIC_KEY
+              ValueFrom: !Sub "${AppKeysSecretArn}:LANGFUSE_PUBLIC_KEY::"
+            - Name: LANGFUSE_SECRET_KEY
+              ValueFrom: !Sub "${AppKeysSecretArn}:LANGFUSE_SECRET_KEY::"
           Environment:
             # PG_PORT kept per D5.1 spec; not actively used by current retrieval (file-based)
             - Name: PG_PORT
               Value: "5434"
-            - Name: LANGFUSE_PUBLIC_KEY
-              Value: pk-lf-3145d5cb-cb4f-4492-ab57-5a44a84d8a04
-            - Name: LANGFUSE_SECRET_KEY
-              Value: sk-lf-fab17270-12c9-43ce-b5bf-c8a54f95fa2d
             - Name: LANGFUSE_HOST
               Value: https://cloud.langfuse.com
             - Name: RAG_API_URL
-              Value: http://acmera-dev-alb-1455256747.ap-south-1.elb.amazonaws.com
+              Value: !Ref RagApiUrl
 
   # -------------------------------------------------------------------------
   # ALB
@@ -330,16 +286,18 @@ Resources:
       ServiceName: !Sub acmera-support-${Environment}-service
       Cluster: !Ref ECSCluster
       TaskDefinition: !Ref TaskDefinition
-      LaunchType: FARGATE
+      CapacityProviderStrategy:
+        - CapacityProvider: !If [UseSpotCapacity, FARGATE_SPOT, FARGATE]
+          Weight: 1
       DesiredCount: 1
       NetworkConfiguration:
         AwsvpcConfiguration:
           Subnets:
-            - !Ref PrivateSubnetA
-            - !Ref PrivateSubnetB
+            - !Ref PublicSubnetA
+            - !Ref PublicSubnetB
           SecurityGroups:
             - !Ref ECSSecurityGroup
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
       LoadBalancers:
         - ContainerName: novus-support
           ContainerPort: !Ref ContainerPort
