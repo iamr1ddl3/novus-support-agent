@@ -89,6 +89,34 @@ The `/query` response includes the agent's **full trajectory** (steps taken, too
 
 ---
 
+## ☁️ Deploy to AWS
+
+Both Novus projects run on ECS Fargate in **ap-south-1** and are designed to be switched **on for a demo and off afterwards**. While they are down, the only cost is image and snapshot storage.
+
+**One-time setup**
+- AWS CLI signed in (`aws login`). Docker is only needed for `--build`.
+- A Secrets Manager secret `novus/dev/app-keys` in ap-south-1 with the JSON keys `OPENAI_API_KEY`, `COHERE_API_KEY` (may be empty), `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. No key lives in this repo or in stack parameters.
+
+**Order matters:** the Support Agent calls the RAG assistant, so the RAG assistant goes up first and comes down last.
+
+```bash
+# Up (about 20 min, then 10 min)
+novus-rag-assistant/deploy/up.sh          # creates acmera-kb-dev, loads the corpus
+novus-support-agent/deploy/up.sh          # creates acmera-support-dev, wired to the RAG URL
+
+# Down (about 5 min, then 10 min)
+novus-support-agent/deploy/down.sh
+novus-rag-assistant/deploy/down.sh        # keeps a final RDS snapshot
+```
+
+Add `--build` to an `up.sh` to rebuild and push the image from your checkout first. Set `USE_SPOT=false` for an interview or a demo where a task must not be replaced mid-session. Fargate Spot (the default) is about 70% cheaper.
+
+**Cost while running:** roughly $2 to $3 a day for both. The stacks have no NAT gateways: tasks sit in public subnets with a public IP for outbound API calls, while `ECSSecurityGroup` only accepts traffic from the ALB and RDS stays in private subnets.
+
+> Stacks created before this layout (with NAT gateways) need one `down.sh` before the next `up.sh`.
+
+---
+
 ## 🧩 How It Works
 
 ```mermaid

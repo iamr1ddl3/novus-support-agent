@@ -562,7 +562,13 @@ def main() -> None:
                         help="Evaluate only first N entries (smoke test)")
     parser.add_argument("--quiet",        action="store_true",
                         help="Suppress per-entry progress output")
+    parser.add_argument("--no-langfuse",  action="store_true",
+                        help="Do not attach eval scores to LangFuse traces")
     args = parser.parse_args()
+
+    if args.no_langfuse:
+        global LANGFUSE_ENABLED
+        LANGFUSE_ENABLED = False
 
     dataset = json.loads(DATASET_PATH.read_text(encoding="utf-8"))
     if args.limit:
