@@ -1,0 +1,230 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Novus Agent Explainer</title><style>:root{--bg:#f6f7f9;--panel:#fff;--ink:#14181f;--muted:#5b6472;--line:#e3e6eb;--accent:#4f46e5;--accent-soft:#eef0ff;--ok:#0f8a5f;--ok-soft:#e5f6ef;--warn:#b45309;--warn-soft:#fdf1e3;--bad:#c2410c;--off:#c9ced6;--code:#f0f2f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--panel:#171b23;--ink:#e8ebf0;--muted:#9aa3b2;--line:#2a303b;--accent:#8b85ff;--accent-soft:#23234a;--ok:#34c38f;--ok-soft:#123227;--warn:#f0a35a;--warn-soft:#3a2a17;--bad:#f08a5a;--off:#3a414d;--code:#1f2430}}
+:root[data-theme="dark"]{--bg:#0f1218;--panel:#171b23;--ink:#e8ebf0;--muted:#9aa3b2;--line:#2a303b;--accent:#8b85ff;--accent-soft:#23234a;--ok:#34c38f;--ok-soft:#123227;--warn:#f0a35a;--warn-soft:#3a2a17;--bad:#f08a5a;--off:#3a414d;--code:#1f2430}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+header.top{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.topin{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700}.brand small{color:var(--muted);font-weight:500;margin-left:6px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+nav.tabs button,.chip{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+nav.tabs button.on,.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+#themeBtn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 10px;cursor:pointer;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+section.view{display:none}section.view.on{display:block}
+h1{font-size:26px;margin:4px 0 6px;letter-spacing:-.01em}h2{font-size:19px;margin:28px 0 8px}h3{font-size:15px;margin:0 0 6px}
+p.lead{color:var(--muted);margin:0 0 14px;max-width:760px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tile .v{font-size:24px;font-weight:700;letter-spacing:-.01em}.tile .k{color:var(--muted);font-size:13px}.tile .s{font-size:12px;color:var(--muted);margin-top:4px}
+.bar{height:6px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.pipe{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.stage{flex:1 1 120px;min-width:120px;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;position:relative;transition:.15s}
+.stage .n{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}.stage .t{font-weight:600;font-size:14px}
+.stage.active{border-color:var(--accent);background:var(--accent-soft)}
+.stage.skip{opacity:.38;border-style:dashed}
+.stage.sel{box-shadow:0 0 0 3px var(--accent-soft);border-color:var(--accent)}
+.stage.run{border-color:var(--ok);background:var(--ok-soft)}
+.arrow{align-self:center;color:var(--muted);font-size:18px}
+@media(max-width:700px){.arrow{display:none}.stage{flex-basis:45%}}
+.detail{margin-top:12px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+code{background:var(--code);padding:1px 5px;border-radius:5px}
+pre{background:var(--code);padding:12px;border-radius:10px;overflow-x:auto;margin:8px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.tbl{overflow-x:auto}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:10px 12px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.tip{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--code);border-radius:10px;padding:12px;min-height:120px;white-space:pre-wrap}
+.log .l{opacity:0;transform:translateY(3px);transition:.25s}.log .l.in{opacity:1;transform:none}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;background:var(--panel);margin:8px 0}
+summary{cursor:pointer;font-weight:600}
+input[type=text]{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
+.tree{font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.8}
+.tree div{cursor:pointer;border-radius:6px;padding:0 6px}.tree div:hover{background:var(--accent-soft)}
+.tree .ms{color:var(--muted);float:right}
+.svgwrap{overflow-x:auto}svg text{font-family:inherit}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+</style></head><body><header class="top"><div class="topin">
+<div class="brand">Novus Bank Support Agent<small>interactive explainer</small></div>
+<nav class="tabs" id="tabs">
+<button data-v="overview" class="on">Overview</button><button data-v="graph">Agent graph</button><button data-v="router">Tool routing</button><button data-v="esc">Escalation</button><button data-v="walk">Trajectories</button><button data-v="safety">Safety</button><button data-v="eval">Evaluation</button><button data-v="trace">Tracing</button><button data-v="aws">AWS</button>
+<button id="themeBtn" title="Toggle theme">◐</button></nav></div></header>
+<main>
+
+<section class="view on" id="overview">
+<h1>A support agent that picks a tool, answers, or hands off to a human</h1>
+<p class="lead">Built with LangGraph. For each customer message it classifies the intent, calls the right tool (policy knowledge base, application tracker, account lookup), decides whether a human should take over, and replies. The customer's personal data is masked before any model sees it.</p>
+<div class="grid g4">
+<div class="tile"><div class="k">Graph nodes</div><div class="v">5</div><div class="s">classify · tool · evaluate · respond · escalate</div></div>
+<div class="tile"><div class="k">Tools</div><div class="v">3</div><div class="s">policy_kb · order_tracker · account_lookup</div></div>
+<div class="tile"><div class="k">Routing accuracy</div><div class="v">96.9%</div><div class="s">right tool picked, 32 answerable queries</div></div>
+<div class="tile"><div class="k">Model</div><div class="v">gpt-4o-mini</div><div class="s">fallback gpt-3.5-turbo via LiteLLM</div></div>
+</div>
+<h2>How it fits with the RAG assistant</h2>
+<div class="card"><p style="margin:0">The agent doesn't keep its own copy of the bank's policies. Its <code>policy_kb</code> tool calls the <b>Novus RAG assistant</b>'s <code>/query</code> API in Hybrid mode and uses the passages it returns (design decision ADR-8). If the RAG API is unreachable, it falls back to a small in-memory retriever, so the agent still answers. That's why the RAG app is deployed first and torn down last.</p></div>
+<h2>What one request returns</h2>
+<pre>POST /query  {"query": "How long does it take to activate my savings account?"}
+→ { "answer": "...within 2 hours after Video KYC...",
+    "intent": "order_status", "tool": "order_tracker",
+    "tools_called": ["classify", "order_tracker", "respond"],
+    "steps_taken": 3, "escalation": false,
+    "pii_redacted": false, "trace_id": "a9e0…" }</pre>
+</section>
+
+<section class="view" id="graph">
+<h1>The LangGraph state machine</h1>
+<p class="lead">Every query walks this graph. Click a node to see what it does. The loop from <b>evaluate</b> back to <b>tool</b> is how the agent makes a second tool call for multi-part questions.</p>
+<div class="card svgwrap"><svg id="gsvg" viewBox="0 0 820 300" width="100%" style="min-width:640px" role="img" aria-label="Agent graph">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+<g stroke="var(--muted)" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+<path d="M88,150H128"/><path d="M248,150H288"/><path d="M408,150H448"/>
+<path d="M568,135L640,75"/><path d="M568,165L640,225"/>
+<path d="M508,122C508,60 348,60 348,120" stroke-dasharray="5 4"/>
+<path d="M760,62H790"/><path d="M760,238H790"/></g>
+<g font-size="12" fill="var(--muted)"><text x="428" y="58" text-anchor="middle">multi_tool &amp; only 1 result → second tool</text><text x="600" y="96" text-anchor="end">escalate?</text><text x="600" y="214" text-anchor="end">default</text></g>
+<g font-size="13" fill="var(--ink)">
+<g class="gn" data-n="start"><rect x="8" y="128" width="80" height="44" rx="22" fill="var(--panel)" stroke="var(--line)"/><text x="48" y="155" text-anchor="middle">query</text></g>
+<g class="gn" data-n="classify"><rect x="128" y="122" width="120" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="188" y="148" text-anchor="middle" font-weight="600">classify</text><text x="188" y="165" text-anchor="middle" font-size="11" fill="var(--muted)">intent → tool</text></g>
+<g class="gn" data-n="tool"><rect x="288" y="122" width="120" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="348" y="148" text-anchor="middle" font-weight="600">tool</text><text x="348" y="165" text-anchor="middle" font-size="11" fill="var(--muted)">run the tool</text></g>
+<g class="gn" data-n="evaluate"><rect x="448" y="122" width="120" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="508" y="148" text-anchor="middle" font-weight="600">evaluate</text><text x="508" y="165" text-anchor="middle" font-size="11" fill="var(--muted)">route next</text></g>
+<g class="gn" data-n="escalate"><rect x="640" y="36" width="120" height="52" rx="10" fill="var(--warn-soft)" stroke="var(--warn)"/><text x="700" y="60" text-anchor="middle" font-weight="600">escalate</text><text x="700" y="77" text-anchor="middle" font-size="11" fill="var(--muted)">human handoff</text></g>
+<g class="gn" data-n="respond"><rect x="640" y="212" width="120" height="52" rx="10" fill="var(--ok-soft)" stroke="var(--ok)"/><text x="700" y="236" text-anchor="middle" font-weight="600">respond</text><text x="700" y="253" text-anchor="middle" font-size="11" fill="var(--muted)">grounded answer</text></g>
+<text x="806" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">END</text><text x="806" y="242" text-anchor="middle" font-size="11" fill="var(--muted)">END</text>
+</g></svg></div>
+<div class="card detail" id="nodeDetail"><h3>Click a node</h3><p style="color:var(--muted);margin:0">All nodes live in <code>scripts/agent.py</code>; each is a span in the Langfuse trace.</p></div>
+<div class="tip">Safety limit: <code>MAX_STEPS = 6</code>. If a query ever reaches 6 steps, evaluate sends it straight to respond, so the graph can't loop forever.</div>
+</section>
+
+<section class="view" id="router">
+<h1>Which tool does it pick?</h1>
+<p class="lead">The classifier (gpt-4o-mini, temperature 0) labels the intent. Most intents map straight to a tool with a lookup table; one ambiguous intent gets a second LLM call. Click an intent.</p>
+<div class="row" id="intents" style="margin-bottom:12px"></div>
+<div class="grid g2"><div class="card" id="intentCard"></div>
+<div class="card"><h3>The three tools</h3>
+<p><b>policy_kb</b>: calls the RAG assistant's <code>/query</code> (Hybrid) for policy passages. Falls back to local retrieval if the API is down.</p>
+<p><b>order_tracker</b>: account-activation and loan-disbursement status. A realistic <i>mock</i> in this demo; production would call an order system.</p>
+<p><b>account_lookup</b>: tier details (Standard / Plus / Elite): interest, minimum balance, ATM limits, loan rates. Also a mock of the core banking system.</p>
+<p style="margin-bottom:0"><b>multi_tool</b>: policy_kb first, then account_lookup, then answers from both.</p></div></div>
+</section>
+
+<section class="view" id="esc">
+<h1>When does it hand off to a human?</h1>
+<p class="lead">Escalation is a two-stage check in the evaluate step. Stage 1 is a free keyword scan. Only if a keyword matches does stage 2 ask gpt-4o-mini to confirm, which cuts false alarms. Type a message to run stage 1 live with the agent's real keyword list.</p>
+<div class="card"><input type="text" id="escIn" value="I was charged twice for my EMI and want this reversed immediately">
+<div class="row" style="margin:10px 0" id="escEx"><span style="color:var(--muted);font-size:13px">Try:</span>
+<button class="chip">What is the minimum balance for Novus Plus?</button><button class="chip">I have complained three times, I want to escalate to a manager</button><button class="chip">There is an unauthorised transaction of Rs 45,000 on my card</button><button class="chip">Is UPI urgent transfer free?</button></div>
+<div class="grid g2"><div><h3>Stage 1 · keyword scan <span class="tag">no API cost</span></h3><div id="esc1"></div></div><div><h3>Stage 2 · LLM confirmation</h3><div id="esc2"></div></div></div></div>
+<details><summary>All 37 escalation keywords</summary><p id="kwList" style="line-height:2"></p></details>
+<div class="note">Keyword false positives are why stage 2 exists. "Is UPI <b>urgent</b> transfer free?" matches "urgent", but the LLM should say it's an ordinary question. If the LLM call fails, the agent trusts the keyword hit and escalates (fails safe).</div>
+</section>
+
+<section class="view" id="walk">
+<h1>Replay real trajectories</h1>
+<p class="lead">Each replay follows the node path the agent took for that question in live tests on 2026-11-22. Outputs are summarized; it doesn't call the live API.</p>
+<div class="row" id="qs" style="margin-bottom:10px"></div>
+<div class="card"><div class="row" style="justify-content:space-between"><b id="qText"></b><div class="row"><button class="btn" id="runBtn">Run ▶</button><button class="btn ghost" id="resetBtn">Reset</button></div></div>
+<div class="pipe" id="path" style="margin-top:12px"></div>
+<div class="log" id="log" style="margin-top:12px"></div></div>
+</section>
+
+<section class="view" id="safety">
+<h1>Safety: guardrails and PII</h1>
+<p class="lead">Both checks run in <code>run_agent()</code> around the graph, on by default because the API calls it directly.</p>
+<div class="card"><div class="pipe">
+<div class="stage active"><div class="n">1</div><div class="t">Input guardrail</div></div><span class="arrow">→</span>
+<div class="stage active"><div class="n">2</div><div class="t">PII anonymize</div></div><span class="arrow">→</span>
+<div class="stage active"><div class="n">3</div><div class="t">Graph on clean text</div></div><span class="arrow">→</span>
+<div class="stage active"><div class="n">4</div><div class="t">Restore PII in answer</div></div></div>
+<pre>"My account 50100234567 shows a wrong penalty"
+→ "My account &lt;IN_BANK_ACCOUNT&gt; shows a wrong penalty"   (what tools + LLM see)
+→ answer mentions &lt;IN_BANK_ACCOUNT&gt; → restored to 50100234567 for the customer</pre></div>
+<div class="grid g2" style="margin-top:12px">
+<div class="card"><h3>Input guardrail</h3><p>Blocks off-topic (e.g. IPL scores), prompt injection, staff impersonation and requests for internal policy before any tool runs. Blocked queries return a refusal with <code>intent = "blocked"</code>.</p></div>
+<div class="card"><h3>What Langfuse sees</h3><p>The trace input and output are the <i>anonymized</i> question and answer. LLM generations record model, output and token counts but not the prompt, because the guardrail's own call sees the raw question.</p></div></div>
+<div class="note"><b>Known over-blocking (open):</b> the guardrail refuses the UI's own "Escalation" and "Fraud" example chips, any message containing a phone number or PAN (so PII redaction is hard to demo live), and "What are the IMPS charges for a Plus customer?". The Standard-tier minimum balance answer is also wrong (₹10,000 instead of ₹1,000).</div>
+</section>
+
+<section class="view" id="eval">
+<h1>How well it works</h1>
+<p class="lead">42-query golden set: 32 answerable + 10 should-escalate. Faithfulness and correctness are LLM-judge scores normalized to 0–1. CI fails a PR if any metric drops more than 5 points.</p>
+<div class="grid g3" id="evalTiles"></div>
+<div class="tip">Classification is the weakest number (75%), but routing still reaches 96.9% because several intents map to the same tool, so a wrong label often picks the right tool anyway.</div>
+<div class="note">LLM-judge noise is real: on 2026-11-22 a PR with no code change failed once with faithfulness −5.01 points (limit 5.00) and passed on re-run.</div>
+</section>
+
+<section class="view" id="trace">
+<h1>One query = one trace in Langfuse</h1>
+<p class="lead">Added on 2026-11-22 (<code>scripts/tracing.py</code>, Langfuse SDK v5 over OpenTelemetry). Click a span. This tree is the real shape of a policy question's trace.</p>
+<div class="grid g2"><div class="card tree" id="tree"></div><div class="card" id="spanDetail"></div></div>
+<div class="tip">Each trace is tagged with the intent (plus <code>escalated</code> or <code>blocked</code>) and carries metadata (tool, tools_called, steps_taken, escalation, pii_redacted), so in Langfuse you can filter for "all escalations" or "all multi-tool queries". Project: <b>novus-support-agent</b>, US region.</div>
+</section>
+
+<section class="view" id="aws">
+<h1>How it runs on AWS</h1>
+<p class="lead">CloudFormation stack <code>acmera-support-dev</code> in ap-south-1. No database: it reaches policy data through the RAG assistant's load balancer.</p>
+<div class="card svgwrap"><svg viewBox="0 0 760 230" width="100%" style="min-width:600px" role="img" aria-label="AWS architecture">
+<defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--muted)"/></marker></defs>
+<g font-size="13" fill="var(--ink)">
+<rect x="10" y="85" width="100" height="56" rx="10" fill="var(--panel)" stroke="var(--line)"/><text x="60" y="110" text-anchor="middle" font-weight="600">Browser</text><text x="60" y="128" text-anchor="middle" font-size="11" fill="var(--muted)">web UI · /query</text>
+<rect x="150" y="20" width="350" height="195" rx="14" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/><text x="162" y="40" font-size="11" fill="var(--muted)">VPC · public subnets (no NAT)</text>
+<rect x="170" y="85" width="110" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="225" y="117" text-anchor="middle" font-weight="600">ALB</text>
+<rect x="320" y="85" width="160" height="56" rx="10" fill="var(--ok-soft)" stroke="var(--ok)"/><text x="400" y="107" text-anchor="middle" font-weight="600">ECS Fargate</text><text x="400" y="125" text-anchor="middle" font-size="11" fill="var(--muted)">Spot · 1 vCPU / 3 GB</text>
+<rect x="340" y="165" width="120" height="36" rx="10" fill="var(--panel)" stroke="var(--line)"/><text x="400" y="188" text-anchor="middle" font-size="12">Secrets Mgr</text>
+<rect x="560" y="25" width="190" height="44" rx="10" fill="var(--panel)" stroke="var(--line)"/><text x="655" y="52" text-anchor="middle">RAG assistant ALB</text>
+<rect x="560" y="90" width="190" height="44" rx="10" fill="var(--panel)" stroke="var(--line)"/><text x="655" y="117" text-anchor="middle">OpenAI</text>
+<rect x="560" y="155" width="190" height="44" rx="10" fill="var(--panel)" stroke="var(--line)"/><text x="655" y="182" text-anchor="middle">Langfuse (US)</text></g>
+<g stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#ar2)"><path d="M110,113H168"/><path d="M280,113H318"/><path d="M400,141V163"/><path d="M480,100L558,52"/><path d="M480,113H558"/><path d="M480,126L558,174"/></g></svg></div>
+<div class="grid g4" style="margin-top:12px">
+<div class="tile"><div class="k">This app</div><div class="v">~$1.50/day</div><div class="s">ALB + task + public IPs (est.)</div></div>
+<div class="tile"><div class="k">With RAG app</div><div class="v">~$3.25/day</div><div class="s">both stacks, estimate</div></div>
+<div class="tile"><div class="k">Bring up</div><div class="v">up.sh</div><div class="s">after the RAG app is up</div></div>
+<div class="tile"><div class="k">Tear down</div><div class="v">down.sh</div><div class="s">before the RAG app</div></div></div>
+<div class="tip">The template takes <code>RagApiUrl</code> (the RAG ALB), <code>AppKeysSecretArn</code> (Secrets Manager <code>novus/dev/app-keys</code>), <code>LangfuseHost</code> and <code>UseSpot</code>. Set <code>UseSpot=false</code> for an interview demo where the task must not be replaced mid-session.</div>
+</section>
+</main>
+<footer>Novus Bank Support Agent · explainer built 2026-11-22 from the repo source · figures are the repo's measured baselines</footer>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+$$('#tabs button').forEach(b=>b.onclick=()=>{$$('#tabs button').forEach(x=>x.classList.toggle('on',x===b));$$('section.view').forEach(v=>v.classList.toggle('on',v.id===b.dataset.v));scrollTo(0,0)});
+$('#themeBtn').onclick=()=>{const r=document.documentElement,d=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=d==='dark'?'light':'dark'};
+const ND={start:['Incoming query','Before the graph starts, run_agent() applies the input guardrail and PII anonymizer. The graph only ever sees the anonymized query.'],
+classify:['classify_node','Calls classify_tool(): gpt-4o-mini labels the intent (temperature 0), then INTENT_TO_TOOL picks the tool. return_or_refund gets a second LLM call to choose policy_kb or multi_tool. Writes intent, tool, steps_taken + 1.'],
+tool:['tool_node','Runs the chosen tool and appends its text to tool_results. For multi_tool: first pass policy_kb, second pass account_lookup. Records whether policy_kb used the RAG API or the local fallback.'],
+evaluate:['evaluate_node + _route_from_evaluate','Decides the next step, in order: (1) steps ≥ 6 → respond; (2) multi_tool with only one result → back to tool; (3) two-stage escalation check → escalate; (4) otherwise → respond.'],
+escalate:['escalate_node','Writes an empathetic handoff message (gpt-4o-mini) explaining a specialist will follow up, sets escalation = true. The trace gets an "escalated" tag.'],
+respond:['respond_node','Answers using ONLY the tool results. If the answer isn\'t there it says so and points to support, instead of guessing. The answer is then PII-restored for the customer.']};
+$$('.gn').forEach(g=>{g.style.cursor='pointer';g.onclick=()=>{$$('.gn rect').forEach(r=>r.setAttribute('stroke-width','1'));g.querySelector('rect').setAttribute('stroke-width','3');const d=ND[g.dataset.n];$('#nodeDetail').innerHTML=`<h3>${d[0]}</h3><p style="margin:0">${d[1]}</p>`}});
+const IN={order_status:['order_tracker','Account activation, card dispatch, loan disbursement timelines.','How long does it take to activate my savings account?'],product_info:['policy_kb','Interest rates, eligibility, product features.','What is the FD rate for senior citizens?'],membership:['account_lookup','Tier benefits for Standard, Plus, Elite.','What does Elite give me over Plus?'],billing_or_payment:['policy_kb','EMI schedules, fees, charges.','When is my EMI debited each month?'],general:['policy_kb','Catch-all: any other policy question.','How do I report a lost debit card?'],return_or_refund:['policy_kb or multi_tool','Ambiguous, so a second LLM call decides: a general policy question → policy_kb; a dispute about a specific account or charge → multi_tool (policy_kb + account_lookup).','What is the foreclosure penalty for an Elite customer?']};
+$('#intents').innerHTML=Object.keys(IN).map((k,i)=>`<button class="chip ${i?'':'on'}" data-k="${k}">${k}</button>`).join('');
+function showIntent(k){const v=IN[k];$('#intentCard').innerHTML=`<h3>${k}</h3><p>${v[1]}</p><p>Tool: <span class="tag ${k==='return_or_refund'?'warn':'ok'}">${v[0]}</span></p><p style="margin:0;color:var(--muted)">Example: "${v[2]}"</p>`}
+$$('#intents .chip').forEach(c=>c.onclick=()=>{$$('#intents .chip').forEach(x=>x.classList.toggle('on',x===c));showIntent(c.dataset.k)});showIntent('order_status');
+const KW=["reverse immediately","reversed immediately","want this reversed","get this reversed","wrong charge","wrongly charged","incorrect charge","wrong penalty","wrongful","dispute","unauthorized","unauthorised","never authorized","never authorised","fraud","account hacked","security breach","sim swap","locked out","life-threatening","urgent","urgently","immediately","pending for","still not resolved","multiple calls","promised me","despite multiple","unacceptable delay","sla breach","lodge complaint","escalate","legal action","consumer court","already paid","charged twice","double charged"];
+$('#kwList').innerHTML=KW.map(k=>`<code>${k}</code>`).join(' ');
+function esc(){const q=$('#escIn').value.toLowerCase(),hits=KW.filter(k=>q.includes(k));
+$('#esc1').innerHTML=hits.length?`<p><span class="tag warn">match</span> ${hits.map(h=>'<code>'+h+'</code>').join(' ')}</p><p style="color:var(--muted);font-size:13px">Goes to stage 2.</p>`:`<p><span class="tag ok">no match</span></p><p style="color:var(--muted);font-size:13px">Stage 2 is skipped (no LLM cost). Route: respond.</p>`;
+$('#esc2').innerHTML=hits.length?`<p>gpt-4o-mini (temp 0) gets the message plus the first tool results and answers <code>escalate</code> or not.</p><p style="color:var(--muted);font-size:13px">"escalate" in its reply → escalate node · otherwise → respond.</p>`:`<p style="color:var(--muted)">Not run.</p>`}
+$('#escIn').oninput=esc;$$('#escEx .chip').forEach(c=>c.onclick=()=>{$('#escIn').value=c.textContent;esc()});esc();
+const TJ=[{q:'What is the minimum balance for Novus Plus?',p:['classify','tool:policy_kb','evaluate','respond'],s:['classify → intent general, tool policy_kb','policy_kb → POST RAG /query (hybrid) → Plus AQB passages','evaluate → no escalation keyword → respond','respond → states the Novus Plus average quarterly balance from the passages','✅ 4 steps · escalation false']},
+{q:'How long does it take to activate my savings account?',p:['classify','tool:order_tracker','evaluate','respond'],s:['classify → intent order_status → tool order_tracker','order_tracker → "activation within 2 hours after Video KYC; debit card within 7 working days"','evaluate → respond','✅ answer from the tracker · tools_called [classify, order_tracker, respond]']},
+{q:'What is the foreclosure penalty for an Elite customer?',p:['classify','tool:policy_kb','evaluate','tool:account_lookup','evaluate','respond'],s:['classify → intent return_or_refund → disambiguator picks multi_tool','tool pass 1 → policy_kb (foreclosure rules)','evaluate → multi_tool with 1 result → loop back to tool','tool pass 2 → account_lookup (Elite tier details)','evaluate → respond','✅ combines policy + tier · the longest normal path (6 spans)']},
+{q:'I have complained three times and nothing happened. I want to escalate to a manager.',p:['classify','tool:policy_kb','evaluate','escalate'],s:['classify → general → policy_kb','policy_kb → grievance policy passages','evaluate → keyword "escalate" matches (stage 1)','LLM confirms escalation (stage 2)','escalate → empathetic handoff message','🙋 escalation true · trace tagged "escalated"']},
+{q:'Who won the IPL yesterday?',p:['guardrail'],s:['input guardrail → off-topic','⛔ blocked before the graph: no tool, no answer call','↩ polite refusal · intent "blocked" · trace tagged "blocked"']}];
+$('#qs').innerHTML=TJ.map((t,i)=>`<button class="chip ${i?'':'on'}" data-q="${i}">${['Plus min balance','Account activation','Elite foreclosure','Talk to a manager','IPL (off-topic)'][i]}</button>`).join('');
+let qi=0,timer=null;function setQ(i){qi=i;clearInterval(timer);$('#qText').textContent='"'+TJ[i].q+'"';$('#path').innerHTML=TJ[i].p.map((n,k)=>(k?'<span class="arrow">→</span>':'')+`<div class="stage skip" data-k="${k}"><div class="n">${k+1}</div><div class="t">${n}</div></div>`).join('');$('#log').innerHTML='<span style="color:var(--muted)">Press Run to replay.</span>'}
+$$('#qs .chip').forEach(c=>c.onclick=()=>{$$('#qs .chip').forEach(x=>x.classList.toggle('on',x===c));setQ(+c.dataset.q)});
+$('#runBtn').onclick=()=>{setQ(qi);$('#log').innerHTML='';const t=TJ[qi],st=$$('#path .stage');let k=0;const n=Math.max(t.s.length,st.length);timer=setInterval(()=>{if(k>=n){clearInterval(timer);return}if(st[k]){st[k].classList.remove('skip');st[k].classList.add(t.p[k]==='escalate'||t.p[k]==='guardrail'?'active':'run')}if(t.s[k]){const d=document.createElement('div');d.className='l';d.textContent=t.s[k];$('#log').appendChild(d);requestAnimationFrame(()=>d.classList.add('in'))}k++},700)};
+$('#resetBtn').onclick=()=>setQ(qi);setQ(0);
+const EV=[['Routing accuracy','96.9%',96.9,'right tool picked'],['Correct-handle rate','100%',100,'auto-answered what it should'],['Correctness','85.6%',85.6,'4.28 / 5'],['Faithfulness','84.4%',84.4,'4.22 / 5, grounded in tool results'],['Refusal / escalation','80%',80,'10 should-escalate cases'],['Intent classification','75%',75,'weakest metric']];
+$('#evalTiles').innerHTML=EV.map(e=>`<div class="tile"><div class="k">${e[0]}</div><div class="v">${e[1]}</div><div class="bar"><i style="width:${e[2]}%;${e[2]<78?'background:var(--warn)':''}"></i></div><div class="s">${e[3]}</div></div>`).join('');
+const TR=[['support-agent',0,'Root span. Input = anonymized question, output = anonymized answer. Tags: the intent, plus escalated / blocked. Metadata: tool, tools_called, steps_taken, escalation, pii_redacted, guardrail_reason. Its id is returned as trace_id.'],['classify',1,'Graph node span: state in (anonymized query) → intent + tool out. The intent classifier calls OpenAI directly, so it has no generation span of its own.'],['tool',1,'Graph node span wrapping the tool call.'],['tool:policy_kb',2,'Tool span. Its output is the policy passages returned by the RAG assistant; the RAG app also logs its own ask trace for this call.'],['evaluate',1,'Routing node. If escalation stage 2 runs, an llm generation appears under it.'],['respond',1,'Answer node span.'],['llm (generation)',2,'The answer call: model, output, token counts. No prompt text recorded.']];
+$('#tree').innerHTML=TR.map((t,i)=>`<div data-i="${i}">${'&nbsp;&nbsp;&nbsp;'.repeat(t[1])}${t[1]?'└─ ':''}${t[0]}</div>`).join('');
+const sd=i=>$('#spanDetail').innerHTML=`<h3>${TR[i][0]}</h3><p style="margin:0">${TR[i][2]}</p>`;$$('#tree div').forEach(d=>d.onclick=()=>sd(+d.dataset.i));sd(0);
+</script>
+</body></html>

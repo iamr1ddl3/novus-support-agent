@@ -19,7 +19,7 @@
 
 <br/>
 
-[**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Evaluation**](#-evaluation) · [**Known Weaknesses**](#-known-weaknesses)
+[**Quick Start**](#-quick-start) · [**Interactive Explainer**](#interactive-explainer) · [**How It Works**](#-how-it-works) · [**Evaluation**](#-evaluation) · [**Known Weaknesses**](#-known-weaknesses)
 
 </div>
 
@@ -48,6 +48,32 @@ This project builds a **LangGraph agent** that receives a query, classifies inte
 | 🔁 | **LLM fallback** | LiteLLM with a `gpt-3.5-turbo` fallback path |
 | 📊 | **Agent-specific eval** | Classification / routing accuracy, escalation, faithfulness, correctness |
 | 🌐 | **FastAPI + web UI** | `/query` returns answer **plus full trajectory**; `/health` for load balancers |
+
+---
+
+<a id="interactive-explainer"></a>
+
+## 🎛️ Interactive Explainer
+
+A self-contained, offline HTML page that walks through how the agent works. Open [`docs/interactive-explainer.html`](docs/interactive-explainer.html) in a browser, or [view it online](https://htmlpreview.github.io/?https://github.com/iamr1ddl3/novus-support-agent/blob/main/docs/interactive-explainer.html).
+
+- **Agent graph:** a clickable LangGraph diagram (classify → tool → evaluate → respond / escalate), including the multi-tool loop.
+- **Tool routing:** pick an intent to see which tool it maps to.
+- **Escalation:** type any message and the agent's 37 escalation keywords are checked live (stage 1 of the two-stage check).
+- **Trajectories:** replays five real paths, from a normal answer to a multi-tool lookup, a human escalation and an off-topic block.
+- **Also covers:** PII masking, eval scorecard, the Langfuse trace tree, AWS architecture and cost.
+
+<p align="center">
+  <img src="docs/img/explainer-agent-graph.png" alt="Clickable LangGraph state machine" width="100%"/>
+</p>
+
+<details>
+<summary><b>▶ More screenshots</b></summary>
+
+<img src="docs/img/explainer-escalation.png" alt="Live escalation keyword check" width="100%"/>
+<img src="docs/img/explainer-trajectories.png" alt="Replay of a multi-tool trajectory" width="100%"/>
+
+</details>
 
 ---
 
