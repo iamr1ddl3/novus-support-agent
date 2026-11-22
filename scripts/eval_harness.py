@@ -231,7 +231,7 @@ def attach_langfuse_scores(
             ("classification", classification),
             ("routing", routing),
         ]:
-            _lf.score(trace_id=trace_id, name=name, value=value)
+            _lf.create_score(trace_id=trace_id, name=name, value=value)
     except Exception:
         pass
 

@@ -1,7 +1,7 @@
 openai>=1.0.0
 fastapi>=0.100.0
 uvicorn>=0.23.0
-langfuse>=2.0.0,<3.0.0
+langfuse>=5.0.0,<6.0.0   # v5 = OpenTelemetry export (legacy ingestion API shut down 2026-11-16)
 psycopg2-binary
 pgvector
 python-dotenv
