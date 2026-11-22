@@ -57,23 +57,24 @@ This project builds a **LangGraph agent** that receives a query, classifies inte
 
 ## 🎛️ Interactive Explainer
 
-A self-contained, offline HTML page that walks through how the agent works. Open [`docs/interactive-explainer.html`](docs/interactive-explainer.html) in a browser, or [view it online](https://htmlpreview.github.io/?https://github.com/iamr1ddl3/novus-support-agent/blob/main/docs/interactive-explainer.html).
+**Answer, Tool, or Human?** is an 11-step interactive lesson that follows one Novus Bank customer question through the LangGraph agent, on an animated isometric diagram with a live Langfuse span counter. Open [`docs/interactive/index.html`](docs/interactive/index.html) in a browser (it works offline), or [view it online](https://htmlpreview.github.io/?https://github.com/iamr1ddl3/novus-support-agent/blob/main/docs/interactive/index.html). Use the arrow keys or the Back / Next buttons to step through.
 
-- **Agent graph:** a clickable LangGraph diagram (classify → tool → evaluate → respond / escalate), including the multi-tool loop.
-- **Tool routing:** pick an intent to see which tool it maps to.
-- **Escalation:** type any message and the agent's 37 escalation keywords are checked live (stage 1 of the two-stage check).
-- **Trajectories:** replays five real paths, from a normal answer to a multi-tool lookup, a human escalation and an off-topic block.
-- **Also covers:** PII masking, eval scorecard, the Langfuse trace tree, AWS architecture and cost.
+- **Before the graph:** the input guardrail and PII masking, and what they block today.
+- **Intent in, tool out:** how `classify` maps an intent to a tool, and when a second LLM call picks `multi_tool`.
+- **Policy via RAG:** why the agent calls the Novus RAG Assistant instead of keeping its own copy of the policies.
+- **The loop:** how `evaluate` sends a multi-tool query back for a second tool, capped at 6 steps.
+- **Human handoff:** the two-stage escalation check, and how an off-topic question is blocked before the graph runs.
+- **Measured:** the eval scorecard, weak spots included.
 
 <p align="center">
-  <img src="docs/img/explainer-agent-graph.png" alt="Clickable LangGraph state machine" width="100%"/>
+  <img src="docs/img/explainer-intent-to-tool.png" alt="Lesson step 4: classify maps the intent to a tool" width="100%"/>
 </p>
 
 <details>
 <summary><b>▶ More screenshots</b></summary>
 
-<img src="docs/img/explainer-escalation.png" alt="Live escalation keyword check" width="100%"/>
-<img src="docs/img/explainer-trajectories.png" alt="Replay of a multi-tool trajectory" width="100%"/>
+<img src="docs/img/explainer-multi-tool-loop.png" alt="Lesson step 6: evaluate loops back for a second tool" width="100%"/>
+<img src="docs/img/explainer-escalation.png" alt="Lesson step 8: when a human should take over" width="100%"/>
 
 </details>
 
