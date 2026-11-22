@@ -25,6 +25,8 @@
 
 ---
 
+https://github.com/user-attachments/assets/6e8acca4-6950-412c-a461-8436e9a7aff3
+
 ## 🧭 The Use Case
 
 **Novus Bank** support agents field a high volume of customer queries — product questions, account issues, complaints. Some are answerable from policy; some genuinely need a human.
