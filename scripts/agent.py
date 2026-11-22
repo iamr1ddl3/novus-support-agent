@@ -52,6 +52,7 @@ from openai import OpenAI
 import requests
 
 from scripts.llm_fallback import llm_complete  # Gap 2: fallback-aware model calls
+from scripts.tracing import observe, safe_update_trace, current_trace_id
 
 # Gap 5 — the API calls run_agent directly, so input safety + PII redaction must
 # be wired HERE (they previously existed only on the unused handle_query path).
@@ -149,6 +150,7 @@ class AgentState(TypedDict):
 # Tool implementations
 # ---------------------------------------------------------------------------
 
+@observe(name="tool:policy_kb")
 def _run_policy_kb(intent: str, query: str = "") -> tuple[str, str]:
     """Retrieve policy context via Project A's RAG API (ADR-8).
 
@@ -186,6 +188,7 @@ def _run_policy_kb(intent: str, query: str = "") -> tuple[str, str]:
         return f"[policy_kb] Retrieval error: {e}", "error"
 
 
+@observe(name="tool:order_tracker")
 def _run_order_tracker(query: str) -> str:
     """Mock order/activation status lookup.
 
@@ -213,6 +216,7 @@ def _run_order_tracker(query: str) -> str:
     )
 
 
+@observe(name="tool:account_lookup")
 def _run_account_lookup(query: str) -> str:
     """Mock account / membership tier lookup.
 
@@ -311,6 +315,7 @@ def _should_escalate(query: str, tool_results: list[str]) -> bool:
 # Node 1: classify_node
 # ---------------------------------------------------------------------------
 
+@observe(name="classify")
 def classify_node(state: AgentState) -> dict:
     """Classify intent and route to tool using the existing Week 2 classifier.
 
@@ -334,6 +339,7 @@ def classify_node(state: AgentState) -> dict:
 # Node 2: tool_node
 # ---------------------------------------------------------------------------
 
+@observe(name="tool")
 def tool_node(state: AgentState) -> dict:
     """Execute the appropriate tool and append its result to tool_results.
 
@@ -390,6 +396,7 @@ def tool_node(state: AgentState) -> dict:
 # Node 3: evaluate_node  (+ conditional edge router)
 # ---------------------------------------------------------------------------
 
+@observe(name="evaluate")
 def evaluate_node(state: AgentState) -> dict:
     """Decide what happens next. Does NOT modify state — only reads it.
 
@@ -435,6 +442,7 @@ If the answer is not present in the tool results, say:
 Be concise, accurate, and professional."""
 
 
+@observe(name="respond")
 def respond_node(state: AgentState) -> dict:
     """Generate the final grounded answer from accumulated tool results.
 
@@ -469,6 +477,7 @@ Generate a professional acknowledgement message that:
 Be empathetic, brief, and professional."""
 
 
+@observe(name="escalate")
 def escalate_node(state: AgentState) -> dict:
     """Generate an escalation acknowledgement and flag should_escalate=True."""
     ts  = int(time.time())
@@ -528,7 +537,7 @@ app = _build_graph()
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def run_agent(
+def _run_agent_impl(
     query: str,
     use_guardrail: bool = True,
     use_anonymizer: bool = True,
@@ -561,6 +570,8 @@ def run_agent(
                 "pii_redacted":      None,
                 "guardrail_blocked": True,
                 "guardrail_reason":  guard["category"],
+                "_trace_input":      _redact_for_trace(query),
+                "_trace_output":     guard["refusal"],
             }
 
     # --- PII anonymization (Gap 5): strip before the graph touches any LLM ---
@@ -601,6 +612,8 @@ def run_agent(
             "pii_redacted":      None,
             "guardrail_blocked": False,
             "guardrail_reason":  None,
+            "_trace_input":      clean_query,
+            "_trace_output":     f"Agent error: {e}",
         }
 
     # --- Restore PII in the answer (Gap 5) so the customer sees their own data ---
@@ -612,7 +625,7 @@ def run_agent(
         try:
             redaction_audit_log(
                 query=query, anonymizer=anonymizer,
-                intent=result["intent"], trace_id=None,
+                intent=result["intent"], trace_id=current_trace_id(),
             )
         except Exception:
             pass  # audit log failure must never break the pipeline
@@ -631,7 +644,59 @@ def run_agent(
         "pii_redacted":      pii_redacted,
         "guardrail_blocked": False,
         "guardrail_reason":  None,
+        "_trace_input":      clean_query,   # anonymized
+        "_trace_output":     raw_answer,    # anonymized (before PII restore)
     }
+
+
+def _redact_for_trace(text: str) -> str:
+    """Anonymize text for the trace when the graph never ran (guardrail block)."""
+    if PII_ANONYMIZER_AVAILABLE:
+        try:
+            return PiiAnonymizer().anonymize(text)
+        except Exception:
+            pass
+    return "[withheld: PII anonymizer unavailable]"
+
+
+@observe(name="support-agent", capture_input=False, capture_output=False)
+def run_agent(
+    query: str,
+    use_guardrail: bool = True,
+    use_anonymizer: bool = True,
+) -> dict:
+    """Run the LangGraph agent on a customer query (traced in LangFuse).
+
+    One trace per query. Trace input/output are the PII-anonymized query and
+    answer; tags carry the intent plus "escalated" / "blocked" so the
+    LangFuse UI can filter on them. Returns the same dict as before, with
+    trace_id set when tracing is enabled.
+    """
+    result = _run_agent_impl(query, use_guardrail=use_guardrail,
+                             use_anonymizer=use_anonymizer)
+    trace_input  = result.pop("_trace_input", None)
+    trace_output = result.pop("_trace_output", None)
+
+    tags = [result["intent"]]
+    if result["escalation"]:
+        tags.append("escalated")
+    if result.get("guardrail_blocked") and "blocked" not in tags:
+        tags.append("blocked")
+    safe_update_trace(
+        input=trace_input,
+        output=trace_output,
+        tags=tags,
+        metadata={
+            "tool":             result["tool"],
+            "tools_called":     result["tools_called"],
+            "steps_taken":      result["steps_taken"],
+            "escalation":       result["escalation"],
+            "pii_redacted":     result.get("pii_redacted"),
+            "guardrail_reason": result.get("guardrail_reason"),
+        },
+    )
+    result["trace_id"] = current_trace_id()
+    return result
 
 
 # ---------------------------------------------------------------------------

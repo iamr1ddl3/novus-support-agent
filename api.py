@@ -125,6 +125,10 @@ def query(request: QueryRequest) -> QueryResponse:
         result = run_agent(request.query.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent error: {e}")
+    finally:
+        # Send the LangFuse trace before responding (no-op when tracing is off)
+        from scripts.tracing import flush as _flush_traces
+        _flush_traces()
 
     elapsed = round(time.time() - t0, 2)
 
