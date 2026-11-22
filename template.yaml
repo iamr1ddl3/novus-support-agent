@@ -23,6 +23,15 @@ Parameters:
     Type: String
     Description: Base URL of the Project A RAG API (its acmera-kb-dev APIEndpoint output)
 
+  LangfuseHost:
+    Type: String
+    Default: https://us.cloud.langfuse.com
+    AllowedPattern: "https://.+"
+    Description: >
+      LangFuse host the app sends traces to. Must match the region of the
+      LangFuse project whose keys are in AppKeysSecretArn
+      (US https://us.cloud.langfuse.com, EU https://cloud.langfuse.com).
+
   UseSpot:
     Type: String
     Default: "true"
@@ -234,7 +243,7 @@ Resources:
             - Name: PG_PORT
               Value: "5434"
             - Name: LANGFUSE_HOST
-              Value: https://cloud.langfuse.com
+              Value: !Ref LangfuseHost
             - Name: RAG_API_URL
               Value: !Ref RagApiUrl
 
